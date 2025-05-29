@@ -6,6 +6,9 @@
   <title>Transporte Seguro - Paradas</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"/>
   <link rel="stylesheet" href="css/paradas.css"/>
+  <!-- Add Leaflet CSS and JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 </head>
 <body>
   <aside class="sidebar">
@@ -27,7 +30,70 @@
   <main class="main-content">
     <div class="header">
       <h1>Gestión de Paradas</h1>
-      <button class="btn"><i class="fas fa-plus"></i> Nueva Parada</button>
+      <div class="header-actions">
+        <div class="filters">
+          <input type="text" id="searchStop" placeholder="Buscar parada...">
+          <select id="routeFilter">
+            <option value="all">Todas las rutas</option>
+            <option value="R-101">R-101</option>
+            <option value="R-102">R-102</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="addStopBtn"><i class="fas fa-plus"></i> Nueva Parada</button>
+      </div>
+    </div>
+
+    <!-- Add Stop Modal -->
+    <div class="modal" id="stopModal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="modalTitle"><i class="fas fa-map-marker-alt"></i> Nueva Parada</h3>
+          <button class="close-btn" id="closeModalBtn">&times;</button>
+        </div>
+        <form id="stopForm" class="modal-form">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="stopId">ID de Parada</label>
+              <input type="text" id="stopId" placeholder="Ej: P-105" required>
+            </div>
+            <div class="form-group">
+              <label for="stopName">Nombre de Parada</label>
+              <input type="text" id="stopName" placeholder="Ej: Av. Principal" required>
+            </div>
+            <div class="form-group">
+              <label for="stopRoute">Asignar a Ruta</label>
+              <select id="stopRoute" required>
+                <option value="" disabled selected>Seleccione una ruta</option>
+                <option value="R-101">R-101: Centro - Norte</option>
+                <option value="R-102">R-102: Centro - Sur</option>
+                <option value="R-205">R-205: Este - Oeste</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="stopOrder">Orden en Ruta</label>
+              <input type="number" id="stopOrder" min="1" placeholder="Ej: 3" required>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Ubicación en Mapa</label>
+            <div class="map-container">
+              <input type="text" id="stopLocation" placeholder="Coordenadas" required readonly>
+              <small>Haz clic en el mapa para establecer la ubicación</small>
+              <div id="map"></div>
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button type="button" class="btn btn-outline" id="cancelModalBtn">
+              <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save"></i> Guardar Parada
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
 
     <table>
@@ -42,32 +108,220 @@
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <td>P-001</td>
-          <td>Av. Central</td>
-          <td>-12.0464, -77.0428</td>
-          <td>1</td>
-          <td>R-101</td>
-          <td class="actions">
-            <button title="Ver"><i class="fas fa-eye"></i></button>
-            <button title="Editar"><i class="fas fa-edit"></i></button>
-            <button title="Eliminar"><i class="fas fa-trash"></i></button>
-          </td>
-        </tr>
-        <tr>
-          <td>P-002</td>
-          <td>Av. Lima</td>
-          <td>-12.0455, -77.0300</td>
-          <td>2</td>
-          <td>R-101</td>
-          <td class="actions">
-            <button title="Ver"><i class="fas fa-eye"></i></button>
-            <button title="Editar"><i class="fas fa-edit"></i></button>
-            <button title="Eliminar"><i class="fas fa-trash"></i></button>
-          </td>
-        </tr>
       </tbody>
     </table>
   </main>
+
+  <script>
+    // Stops data
+    let stops = [
+      { id: 'P-001', name: 'Av. Central', location: '-12.0464, -77.0428', order: 1, route: 'R-101' },
+      { id: 'P-002', name: 'Av. Lima', location: '-12.0455, -77.0300', order: 2, route: 'R-101' },
+      { id: 'P-003', name: 'Plaza Mayor', location: '-12.0463, -77.0305', order: 1, route: 'R-102' }
+    ];
+
+    // DOM Elements
+    const stopsTable = document.querySelector('table tbody');
+    const addStopBtn = document.getElementById('addStopBtn');
+    const stopModal = document.getElementById('stopModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const cancelModalBtn = document.getElementById('cancelModalBtn');
+    const stopForm = document.getElementById('stopForm');
+    const searchInput = document.getElementById('searchStop');
+    const routeFilter = document.getElementById('routeFilter');
+    const modalTitle = document.getElementById('modalTitle');
+
+    let map;
+    let marker;
+    
+    function initMap() {
+      map = L.map('map').setView([-12.0464, -77.0428], 13);
+      
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map);
+      
+      map.on('click', function(e) {
+        const { lat, lng } = e.latlng;
+        document.getElementById('stopLocation').value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        
+        if (marker) {
+          map.removeLayer(marker);
+        }
+        
+        marker = L.marker([lat, lng]).addTo(map)
+          .bindPopup('Ubicación seleccionada').openPopup();
+      });
+    }
+    
+    // Improved form handling
+    function generateStopId() {
+      const lastId = stops.length > 0 
+        ? Math.max(...stops.map(s => parseInt(s.id.split('-')[1]))) 
+        : 0;
+      return `P-${String(lastId + 1).padStart(3, '0')}`;
+    }
+
+    function openModal() {
+      stopModal.style.display = 'block';
+      document.getElementById('stopId').value = generateStopId();
+      document.getElementById('stopOrder').value = stops.length > 0 
+        ? Math.max(...stops.map(s => s.order)) + 1 
+        : 1;
+      
+      setTimeout(() => {
+        if (!map) initMap();
+        else map.invalidateSize();
+      }, 100);
+    }
+
+    // Render stops table
+    function renderStops() {
+      stopsTable.innerHTML = '';
+      
+      const filteredStops = stops.filter(stop => {
+        const matchesSearch = stop.id.toLowerCase().includes(searchInput.value.toLowerCase()) || 
+                            stop.name.toLowerCase().includes(searchInput.value.toLowerCase());
+        const matchesRoute = routeFilter.value === 'all' || stop.route === routeFilter.value;
+        
+        return matchesSearch && matchesRoute;
+      }).sort((a, b) => a.order - b.order);
+
+      filteredStops.forEach(stop => {
+        const row = document.createElement('tr');
+        
+        row.innerHTML = `
+          <td>${stop.id}</td>
+          <td>${stop.name}</td>
+          <td>${stop.location}</td>
+          <td>${stop.order}</td>
+          <td>${stop.route}</td>
+          <td class="actions">
+            <button class="action-btn" title="Ver" onclick="viewStop('${stop.id}')">
+              <i class="fas fa-eye"></i>
+            </button>
+            <button class="action-btn" title="Editar" onclick="editStop('${stop.id}')">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="action-btn" title="Eliminar" onclick="deleteStop('${stop.id}')">
+              <i class="fas fa-trash"></i>
+            </button>
+          </td>
+        `;
+        
+        stopsTable.appendChild(row);
+      });
+    }
+
+    // Modal functions
+    function closeModal() {
+      stopModal.style.display = 'none';
+      stopForm.reset();
+    }
+
+    // Stop CRUD operations
+    function addStop(e) {
+      e.preventDefault();
+      
+      const newStop = {
+        id: document.getElementById('stopId').value,
+        name: document.getElementById('stopName').value,
+        location: document.getElementById('stopLocation').value,
+        order: parseInt(document.getElementById('stopOrder').value),
+        route: document.getElementById('stopRoute').value
+      };
+      
+      stops.push(newStop);
+      renderStops();
+      closeModal();
+    }
+
+    function viewStop(id) {
+      const stop = stops.find(s => s.id === id);
+      const [lat, lng] = stop.location.split(',').map(Number);
+      
+      const viewModal = document.createElement('div');
+      viewModal.className = 'modal';
+      viewModal.innerHTML = `
+        <div class="modal-content" style="max-width: 600px;">
+          <div class="modal-header">
+            <h3>Detalles de Parada: ${stop.id}</h3>
+            <button class="close-btn" onclick="document.body.removeChild(this.parentElement.parentElement.parentElement)">&times;</button>
+          </div>
+          <div style="padding: 1.5rem;">
+            <p><strong>Nombre:</strong> ${stop.name}</p>
+            <p><strong>Ubicación:</strong> ${stop.location}</p>
+            <p><strong>Orden:</strong> ${stop.order}</p>
+            <p><strong>Ruta:</strong> ${stop.route}</p>
+            <div id="viewMap" style="height: 300px; margin-top: 1rem;"></div>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(viewModal);
+      viewModal.style.display = 'block';
+      
+      setTimeout(() => {
+        const viewMap = L.map('viewMap').setView([lat, lng], 15);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(viewMap);
+        
+        L.marker([lat, lng]).addTo(viewMap)
+          .bindPopup(`<b>${stop.name}</b><br>${stop.location}`)
+          .openPopup();
+      }, 100);
+    }
+
+    function editStop(id) {
+      const stop = stops.find(s => s.id === id);
+      document.getElementById('stopId').value = stop.id;
+      document.getElementById('stopName').value = stop.name;
+      document.getElementById('stopLocation').value = stop.location;
+      document.getElementById('stopOrder').value = stop.order;
+      document.getElementById('stopRoute').value = stop.route;
+      
+      modalTitle.textContent = 'Editar Parada';
+      openModal();
+      
+      // Change form to edit mode
+      stopForm.onsubmit = function(e) {
+        e.preventDefault();
+        stop.id = document.getElementById('stopId').value;
+        stop.name = document.getElementById('stopName').value;
+        stop.location = document.getElementById('stopLocation').value;
+        stop.order = parseInt(document.getElementById('stopOrder').value);
+        stop.route = document.getElementById('stopRoute').value;
+        
+        renderStops();
+        closeModal();
+      };
+    }
+
+    function deleteStop(id) {
+      if(confirm('¿Estás seguro de eliminar esta parada?')) {
+        stops = stops.filter(stop => stop.id !== id);
+        renderStops();
+      }
+    }
+
+    // Event listeners
+    addStopBtn.addEventListener('click', () => {
+      modalTitle.textContent = 'Nueva Parada';
+      stopForm.onsubmit = addStop;
+      openModal();
+    });
+    
+    closeModalBtn.addEventListener('click', closeModal);
+    cancelModalBtn.addEventListener('click', closeModal);
+    searchInput.addEventListener('input', renderStops);
+    routeFilter.addEventListener('change', renderStops);
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      renderStops();
+    });
+  </script>
 </body>
 </html>

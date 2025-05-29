@@ -109,3 +109,5 @@ tr:hover {
 .actions button:hover {
   color: #2563eb;
 }
+
+.sidebar-header { transition: none !important; transform: translateZ(0); }

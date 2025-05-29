@@ -1,14 +1,46 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+  
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Transporte Seguro - Dashboard</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <link rel="stylesheet" href="css/dashboard.css">
+  <style>
+  
+  </style>
 </head>
+
 <body>
   <!-- Sidebar -->
+  <div class="chat-button" id="chat-button">
+    <i class="fas fa-robot 2xl"></i>
+  </div>
+
+  <div class="chat-modal" id="chat-modal">
+    <div class="chat-header">
+      <h3>Asistente TranSeguro</h3>
+      <span class="chat-close" id="chat-close">&times;</span>
+    </div>
+    <div id="username-section" class="username-container">
+      <input type="text" id="username-input" placeholder="Ingresa tu nombre">
+      <button id="start-chat">Comenzar Chat</button>
+    </div>
+    <div id="chat-section" style="display: none;">
+      <div class="chat-messages" id="messages"></div>
+      <div class="typing-indicator" id="typing-indicator"></div>
+      <div class="chat-input">
+        <button id="mic-button">🎤</button>
+        <input type="text" id="message-input" placeholder="Escribe un mensaje...">
+        <button id="send-button">Enviar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- Tu script del chat debe ir aquí, después de que el DOM esté cargado -->
   <aside class="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-logo">
@@ -57,7 +89,7 @@
     <header class="header">
       <h1>Dashboard</h1>
       <div class="user-menu">
-        <div class="user-avatar">MS</div>
+        <div class="user-avatar">Alcides Callasi</div>
       </div>
     </header>
 
@@ -166,6 +198,102 @@
 </script>
 
 
+<script>
+ const socket = io();
+  let username = '';
+  let typingTimeout;
+
+  const chatButton = document.getElementById('chat-button');
+  const chatModal = document.getElementById('chat-modal');
+  const chatClose = document.getElementById('chat-close');
+  const usernameSection = document.getElementById('username-section');
+  const chatSection = document.getElementById('chat-section');
+  const usernameInput = document.getElementById('username-input');
+  const startChatButton = document.getElementById('start-chat');
+  const messageInput = document.getElementById('message-input');
+  const sendButton = document.getElementById('send-button');
+  const messagesDiv = document.getElementById('messages');
+  const typingIndicator = document.getElementById('typing-indicator');
+
+  chatButton.addEventListener('click', () => {
+    chatModal.style.display = chatModal.style.display === 'none' ? 'block' : 'none';
+  });
+
+  chatClose.addEventListener('click', () => {
+    chatModal.style.display = 'none';
+  });
+
+  startChatButton.addEventListener('click', () => {
+    username = usernameInput.value.trim();
+    if (username) {
+      usernameSection.style.display = 'none';
+      chatSection.style.display = 'block';
+      loadMessages();
+    }
+  });
+
+  async function loadMessages() {
+    try {
+      const response = await fetch('/api/messages');
+      const messages = await response.json();
+      messages.forEach(message => addMessageToDOM(message));
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    } catch (error) {
+      console.error('Error al cargar mensajes:', error);
+    }
+  }
+
+  sendButton.addEventListener('click', sendMessage);
+  messageInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMessage();
+  });
+
+  function sendMessage() {
+    const message = messageInput.value.trim();
+    if (message) {
+      const userMessage = { username, message };
+      //addMessageToDOM(userMessage); // Mostrar mensaje del usuario inmediatamente
+      socket.emit('chatMessage', userMessage);
+      messageInput.value = '';
+    }
+  }
+
+  messageInput.addEventListener('input', () => {
+    socket.emit('typing', username);
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => socket.emit('stopTyping'), 1000);
+  });
+
+  socket.on('message', addMessageToDOM);
+  socket.on('userTyping', (typingUsername) => {
+    typingIndicator.textContent = `${typingUsername} está escribiendo...`;
+  });
+  socket.on('userStoppedTyping', () => {
+    typingIndicator.textContent = '';
+  });
+
+  function addMessageToDOM(message) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${message.username === username ? 'sent' : 'received'}`;
+
+    const infoDiv = document.createElement('div');
+    infoDiv.className = 'message-info';
+    infoDiv.textContent = `${message.username} - ${new Date(message.timestamp).toLocaleTimeString()}`;
+
+    const contentDiv = document.createElement('div');
+    contentDiv.textContent = message.message;
+
+    messageDiv.appendChild(infoDiv);
+    messageDiv.appendChild(contentDiv);
+    messagesDiv.appendChild(messageDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+</script>
+
+
+
+
+
     <!-- Recent Activity -->
     <div class="card">
       <div class="card-header">
@@ -222,6 +350,7 @@
         document.querySelector('.dashboard-grid .card:nth-child(1) .card-value').textContent = activeVehicles;
       }, 5000);
     });
+    
   </script>
 </body>
 </html>

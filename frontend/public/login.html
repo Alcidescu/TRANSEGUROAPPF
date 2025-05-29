@@ -179,15 +179,13 @@
         showMessage('⚠️ Error de conexión. Intente nuevamente.', false);
       } finally {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = 'Iniciar sesión';
+        submitBtn.innerHTML = 'Ingresar';
       }
     });
 
-    // Toggle para mostrar/ocultar contraseña
     document.getElementById('togglePassword').addEventListener('click', function() {
       const passwordInput = document.getElementById('password');
       const icon = this;
-      
       if (passwordInput.type === 'password') {
         passwordInput.type = 'text';
         icon.classList.replace('fa-eye', 'fa-eye-slash');

@@ -1,8 +1,7 @@
-
 const Seguimiento = require('../models/seguimientoModel');
 
 const listarSeguimientos = async () => {
-  return await Seguimiento.find();
+  return await Seguimiento.find().sort({ timestamp: -1 });
 };
 
 const crearSeguimiento = async (datos) => {

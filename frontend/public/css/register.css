@@ -229,3 +229,5 @@ body {
     display: none;
   }
 }
+
+.sidebar-header { transition: none !important; transform: translateZ(0); }

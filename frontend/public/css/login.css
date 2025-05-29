@@ -433,3 +433,5 @@ input {
   font-style: italic;
   margin-top: 0.25rem;
 }
+
+.sidebar-header { transition: none !important; transform: translateZ(0); }

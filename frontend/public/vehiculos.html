@@ -14,100 +14,269 @@
       Transporte Seguro
     </div>
     <nav class="sidebar-nav">
-      <a href="dashboard.html"><i class="fas fa-tachometer-alt"></i>Dashboard</a>
-      <a href="rutas.html"><i class="fas fa-route"></i>Rutas</a>
-      <a href="vehiculos.html" class="active"><i class="fas fa-bus-alt"></i>Vehículos</a>
-      <a href="paradas.html"><i class="fas fa-map-marker-alt"></i>Paradas</a>
-      <a href="alertas.html"><i class="fas fa-exclamation-triangle"></i>Alertas</a>
-      <a href="seguimiento.html"><i class="fas fa-map-marked-alt"></i>Seguimiento</a>
-      <a href="usuarios.html"><i class="fas fa-users"></i>Usuarios</a>
-      <a href="configuracion.html"><i class="fas fa-cog"></i>Configuración</a>
+      <a href="dashboard.html" class="nav-item"><i class="fas fa-tachometer-alt"></i>Dashboard</a>
+      <a href="rutas.html" class="nav-item"><i class="fas fa-route"></i>Rutas</a>
+      <a href="vehiculos.html" class="nav-item active"><i class="fas fa-bus-alt"></i>Vehículos</a>
+      <a href="paradas.html" class="nav-item"><i class="fas fa-map-marker-alt"></i>Paradas</a>
+      <a href="alertas.html" class="nav-item"><i class="fas fa-exclamation-triangle"></i>Alertas</a>
+      <a href="seguimiento.html" class="nav-item"><i class="fas fa-map-marked-alt"></i>Seguimiento</a>
+      <a href="usuarios.html" class="nav-item"><i class="fas fa-users"></i>Usuarios</a>
+      <a href="configuracion.html" class="nav-item"><i class="fas fa-cog"></i>Configuración</a>
     </nav>
   </aside>
 
   <main class="main-content">
     <div class="header">
       <h1>Gestión de Vehículos</h1>
-      <button class="btn"><i class="fas fa-plus"></i>Nuevo Vehículo</button>
+      <div class="header-actions">
+        <div class="filters">
+          <input type="text" id="searchVehicle" placeholder="Buscar por placa...">
+          <select id="statusFilter">
+            <option value="all">Todos</option>
+            <option value="active">Activos</option>
+            <option value="inactive">Inactivos</option>
+            <option value="maintenance">En mantenimiento</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="addVehicleBtn">
+          <i class="fas fa-plus"></i> Nuevo Vehículo
+        </button>
+      </div>
     </div>
 
+    <div class="table-container">
+      <table class="vehicles-table">
+        <thead>
+          <tr>
+            <th>Placa</th>
+            <th>Tipo</th>
+            <th>Capacidad</th>
+            <th>Estado</th>
+            <th>Ruta Asignada</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="vehiclesTableBody">
+          <!-- Datos se cargarán dinámicamente -->
+        </tbody>
+      </table>
+    </div>
 
-    <table id="dataTable">
-      <thead>
-        <tr>
-          <th>Nombre</th><th>Descripción</th><th>Estado</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Datos se insertan aquí -->
-      </tbody>
-    </table>
+    <!-- Modal para agregar/editar vehículos -->
+    <div class="modal" id="vehicleModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="modalTitle"><i class="fas fa-bus"></i> Nuevo Vehículo</h3>
+          <button class="close-btn" id="closeModalBtn">&times;</button>
+        </div>
+        <form id="vehicleForm">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="vehiclePlate">Placa*</label>
+              <input type="text" id="vehiclePlate" required>
+            </div>
+            <div class="form-group">
+              <label for="vehicleType">Tipo*</label>
+              <select id="vehicleType" required>
+                <option value="">Seleccione...</option>
+                <option value="Bus">Bus</option>
+                <option value="Minibús">Minibús</option>
+                <option value="Microbús">Microbús</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="vehicleCapacity">Capacidad*</label>
+              <input type="number" id="vehicleCapacity" min="1" required>
+            </div>
+            <div class="form-group">
+              <label for="vehicleStatus">Estado*</label>
+              <select id="vehicleStatus" required>
+                <option value="active">Activo</option>
+                <option value="inactive">Inactivo</option>
+                <option value="maintenance">Mantenimiento</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="vehicleRoute">Ruta Asignada</label>
+              <select id="vehicleRoute">
+                <option value="">Ninguna</option>
+                <option value="R-101">R-101</option>
+                <option value="R-102">R-102</option>
+                <option value="R-205">R-205</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="vehicleMaintenance">Último Mantenimiento</label>
+              <input type="date" id="vehicleMaintenance">
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-outline" id="cancelModalBtn">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <script>
-      fetch('http://localhost:3000/api/vehiculos')
-        .then(res => res.json())
-        .then(data => {
-          const tbody = document.querySelector('#dataTable tbody');
-          data.forEach(item => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-              <td>${item.nombre}</td><td>${item.descripcion}</td><td>${item.estado}</td>
+      // Datos iniciales de vehículos
+      let vehiculos = [
+        {
+          placa: 'ABC-123',
+          tipo: 'Bus',
+          capacidad: 40,
+          estado: 'active',
+          ruta: 'R-101',
+          ultimoMantenimiento: '2023-05-15'
+        },
+        {
+          placa: 'XYZ-789',
+          tipo: 'Minibús',
+          capacidad: 20,
+          estado: 'inactive',
+          ruta: 'R-102',
+          ultimoMantenimiento: '2023-06-20'
+        }
+      ];
+
+      // Elementos del DOM
+      const vehiclesTable = document.getElementById('vehiclesTableBody');
+      const addVehicleBtn = document.getElementById('addVehicleBtn');
+      const vehicleModal = document.getElementById('vehicleModal');
+      const vehicleForm = document.getElementById('vehicleForm');
+      const searchInput = document.getElementById('searchVehicle');
+      const statusFilter = document.getElementById('statusFilter');
+
+      // Mostrar vehículos en la tabla
+      function mostrarVehiculos() {
+        vehiclesTable.innerHTML = '';
+        
+        const busqueda = searchInput.value.toLowerCase();
+        const filtroEstado = statusFilter.value;
+        
+        vehiculos
+          .filter(vehiculo => {
+            const coincideBusqueda = vehiculo.placa.toLowerCase().includes(busqueda);
+            const coincideEstado = filtroEstado === 'all' || vehiculo.estado === filtroEstado;
+            return coincideBusqueda && coincideEstado;
+          })
+          .forEach(vehiculo => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${vehiculo.placa}</td>
+              <td>${vehiculo.tipo}</td>
+              <td>${vehiculo.capacidad}</td>
+              <td><span class="status-badge ${vehiculo.estado}">${getEstadoText(vehiculo.estado)}</span></td>
+              <td>${vehiculo.ruta || 'N/A'}</td>
               <td class="actions">
-                <button title="Ver"><i class="fas fa-eye"></i></button>
-                <button title="Editar"><i class="fas fa-edit"></i></button>
-                <button title="Eliminar"><i class="fas fa-trash"></i></button>
+                <button class="btn-action view" onclick="verDetallesVehiculo('${vehiculo.placa}')">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn-action edit" onclick="editarVehiculo('${vehiculo.placa}')">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn-action delete" onclick="eliminarVehiculo('${vehiculo.placa}')">
+                  <i class="fas fa-trash"></i>
+                </button>
               </td>
             `;
-            tbody.appendChild(tr);
+            vehiclesTable.appendChild(row);
           });
-        })
-        .catch(err => {
-          console.error('Error al cargar datos:', err);
-        });
+      }
+
+      // Funciones CRUD
+      function agregarVehiculo(e) {
+        e.preventDefault();
+        
+        const nuevoVehiculo = {
+          placa: document.getElementById('vehiclePlate').value,
+          tipo: document.getElementById('vehicleType').value,
+          capacidad: parseInt(document.getElementById('vehicleCapacity').value),
+          estado: document.getElementById('vehicleStatus').value,
+          ruta: document.getElementById('vehicleRoute').value || null,
+          ultimoMantenimiento: document.getElementById('vehicleMaintenance').value || null
+        };
+        
+        vehiculos.push(nuevoVehiculo);
+        mostrarVehiculos();
+        cerrarModal();
+      }
+
+      function editarVehiculo(placa) {
+        const vehiculo = vehiculos.find(v => v.placa === placa);
+        
+        document.getElementById('vehiclePlate').value = vehiculo.placa;
+        document.getElementById('vehicleType').value = vehiculo.tipo;
+        document.getElementById('vehicleCapacity').value = vehiculo.capacidad;
+        document.getElementById('vehicleStatus').value = vehiculo.estado;
+        document.getElementById('vehicleRoute').value = vehiculo.ruta || '';
+        document.getElementById('vehicleMaintenance').value = vehiculo.ultimoMantenimiento || '';
+        
+        document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit"></i> Editar Vehículo';
+        
+        vehicleForm.onsubmit = function(e) {
+          e.preventDefault();
+          
+          vehiculo.placa = document.getElementById('vehiclePlate').value;
+          vehiculo.tipo = document.getElementById('vehicleType').value;
+          vehiculo.capacidad = parseInt(document.getElementById('vehicleCapacity').value);
+          vehiculo.estado = document.getElementById('vehicleStatus').value;
+          vehiculo.ruta = document.getElementById('vehicleRoute').value || null;
+          vehiculo.ultimoMantenimiento = document.getElementById('vehicleMaintenance').value || null;
+          
+          mostrarVehiculos();
+          cerrarModal();
+        };
+        
+        abrirModal();
+      }
+
+      function eliminarVehiculo(placa) {
+        if(confirm(`¿Está seguro de eliminar el vehículo ${placa}?`)) {
+          vehiculos = vehiculos.filter(v => v.placa !== placa);
+          mostrarVehiculos();
+        }
+      }
+
+      function verDetallesVehiculo(placa) {
+        const vehiculo = vehiculos.find(v => v.placa === placa);
+        alert(`Detalles del vehículo:\n\nPlaca: ${vehiculo.placa}\nTipo: ${vehiculo.tipo}\nCapacidad: ${vehiculo.capacidad}\nEstado: ${getEstadoText(vehiculo.estado)}\nRuta: ${vehiculo.ruta || 'Ninguna'}\nÚltimo mantenimiento: ${vehiculo.ultimoMantenimiento || 'No registrado'}`);
+      }
+
+      // Funciones auxiliares
+      function getEstadoText(estado) {
+        const estados = {
+          active: 'Activo',
+          inactive: 'Inactivo',
+          maintenance: 'En mantenimiento'
+        };
+        return estados[estado] || estado;
+      }
+
+      function abrirModal() {
+        vehicleModal.style.display = 'flex';
+      }
+
+      function cerrarModal() {
+        vehicleModal.style.display = 'none';
+        vehicleForm.reset();
+      }
+
+      // Event listeners
+      addVehicleBtn.addEventListener('click', () => {
+        document.getElementById('modalTitle').innerHTML = '<i class="fas fa-bus"></i> Nuevo Vehículo';
+        vehicleForm.onsubmit = agregarVehiculo;
+        abrirModal();
+      });
+
+      document.getElementById('closeModalBtn').addEventListener('click', cerrarModal);
+      document.getElementById('cancelModalBtn').addEventListener('click', cerrarModal);
+      searchInput.addEventListener('input', mostrarVehiculos);
+      statusFilter.addEventListener('change', mostrarVehiculos);
+
+      // Inicializar
+      document.addEventListener('DOMContentLoaded', mostrarVehiculos);
     </script>
-    
-
-
-
-    <table>
-      <thead>
-        <tr>
-          <th>Placa</th>
-          <th>Tipo</th>
-          <th>Capacidad</th>
-          <th>Estado</th>
-          <th>Ruta Asignada</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>ABC-123</td>
-          <td>Bus</td>
-          <td>40</td>
-          <td>Activo</td>
-          <td>R-101</td>
-          <td class="actions">
-            <button title="Ver"><i class="fas fa-eye"></i></button>
-            <button title="Editar"><i class="fas fa-edit"></i></button>
-            <button title="Eliminar"><i class="fas fa-trash"></i></button>
-          </td>
-        </tr>
-        <tr>
-          <td>XYZ-789</td>
-          <td>Minibús</td>
-          <td>20</td>
-          <td>Inactivo</td>
-          <td>R-205</td>
-          <td class="actions">
-            <button title="Ver"><i class="fas fa-eye"></i></button>
-            <button title="Editar"><i class="fas fa-edit"></i></button>
-            <button title="Eliminar"><i class="fas fa-trash"></i></button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
   </main>
 </body>
 </html>

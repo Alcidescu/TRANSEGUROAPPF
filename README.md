@@ -68,3 +68,5 @@ Abrir archivos HTML desde `/frontend/public/` en el navegador:
 ---
 
 ¡Listo para producción o para seguir ampliándolo! 🚀
+ECHO POR Alcides Callasi Ugarte
+

@@ -283,3 +283,5 @@ footer {
         margin: 0.5rem 0;
     }
 }
+
+.sidebar-header { transition: none !important; transform: translateZ(0); }

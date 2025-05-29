@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Asistente TranSeguro</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f0f2f5;
+    }
+    .chat-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 350px;
+      max-width: 90%;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      z-index: 9999;
+    }
+    .chat-header {
+      background: #075e54;
+      color: white;
+      padding: 15px;
+      border-radius: 10px 10px 0 0;
+      text-align: center;
+      position: relative;
+    }
+    .chat-header button {
+      position: absolute;
+      right: 15px;
+      top: 10px;
+      background: transparent;
+      border: none;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+    }
+    .chat-messages {
+      height: 400px;
+      overflow-y: auto;
+      padding: 15px;
+    }
+    .message {
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 10px;
+      max-width: 70%;
+    }
+    .received {
+      background: #e8e8e8;
+      float: left;
+      clear: both;
+    }
+    .sent {
+      background: #dcf8c6;
+      float: right;
+      clear: both;
+    }
+    .message-info {
+      font-size: 0.8em;
+      color: #666;
+      margin-bottom: 5px;
+    }
+    .chat-input {
+      padding: 15px;
+      border-top: 1px solid #ddd;
+      display: flex;
+      gap: 10px;
+    }
+    #message-input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 20px;
+      outline: none;
+    }
+    #send-button {
+      padding: 10px 20px;
+      background: #075e54;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+    }
+    #send-button:hover {
+      background: #128c7e;
+    }
+    .typing-indicator {
+      padding: 10px;
+      color: #666;
+      font-style: italic;
+    }
+    .username-container {
+      padding: 15px;
+      text-align: center;
+    }
+    #username-input {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 20px;
+      margin-right: 10px;
+    }
+    #start-chat {
+      padding: 10px 20px;
+      background: #075e54;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">
+      <h2>Asistente TranSeguro</h2>
+      <button id="toggle-chat">–</button>
+    </div>
+
+    <div id="username-section" class="username-container">
+      <input type="text" id="username-input" placeholder="Ingresa tu nombre" />
+      <button id="start-chat">Comenzar Chat</button>
+    </div>
+
+    <div id="chat-section">
+      <div class="chat-messages" id="messages"></div>
+      <div class="typing-indicator" id="typing-indicator"></div>
+      <div class="chat-input">
+        <input type="text" id="message-input" placeholder="Escribe un mensaje..." />
+        <button id="send-button">Enviar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let username = '';
+    let typingTimeout;
+
+    const usernameSection = document.getElementById('username-section');
+    const chatSection = document.getElementById('chat-section');
+    const usernameInput = document.getElementById('username-input');
+    const startChatButton = document.getElementById('start-chat');
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+    const messagesDiv = document.getElementById('messages');
+    const typingIndicator = document.getElementById('typing-indicator');
+    const toggleBtn = document.getElementById('toggle-chat');
+
+    // Minimizar/Maximizar chat
+    toggleBtn.addEventListener('click', () => {
+      if (chatSection.style.display === 'none') {
+        chatSection.style.display = 'block';
+        toggleBtn.textContent = '–';
+      } else {
+        chatSection.style.display = 'none';
+        toggleBtn.textContent = '+';
+      }
+    });
+
+    // Iniciar sesión
+    startChatButton.addEventListener('click', () => {
+      username = usernameInput.value.trim();
+      if (username) {
+        usernameSection.style.display = 'none';
+        chatSection.style.display = 'block';
+        toggleBtn.textContent = '–';
+        loadMessages();
+      }
+    });
+
+    // Cargar mensajes existentes
+    async function loadMessages() {
+      try {
+        const response = await fetch('/api/messages');
+        const messages = await response.json();
+        messages.forEach(msg => addMessageToDOM(msg));
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      } catch (error) {
+        console.error('Error al cargar mensajes:', error);
+      }
+    }
+
+    // Enviar mensaje
+    sendButton.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+
+    function sendMessage() {
+      const message = messageInput.value.trim();
+      if (message) {
+        socket.emit('chatMessage', { username, message });
+        messageInput.value = '';
+      }
+    }
+
+    // Detectar escritura
+    messageInput.addEventListener('input', () => {
+      socket.emit('typing', username);
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(() => socket.emit('stopTyping'), 1000);
+    });
+
+    // Recibir mensajes desde backend
+    socket.on('message', addMessageToDOM);
+    socket.on('userTyping', (typingUsername) => {
+      typingIndicator.textContent = `${typingUsername} está escribiendo...`;
+    });
+    socket.on('userStoppedTyping', () => {
+      typingIndicator.textContent = '';
+    });
+
+    // Mostrar mensaje en DOM
+    function addMessageToDOM(message) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${message.username === username ? 'sent' : 'received'}`;
+
+      const infoDiv = document.createElement('div');
+      infoDiv.className = 'message-info';
+
+      const timestamp = message.timestamp ? new Date(message.timestamp) : new Date();
+      const hora = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      infoDiv.textContent = `${message.username} - ${hora}`;
+
+      const contentDiv = document.createElement('div');
+      contentDiv.textContent = message.message;
+
+      messageDiv.appendChild(infoDiv);
+      messageDiv.appendChild(contentDiv);
+      messagesDiv.appendChild(messageDiv);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+  </script>
+</body>
+</html>

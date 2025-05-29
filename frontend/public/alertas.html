@@ -6,6 +6,7 @@
   <title>Transporte Seguro - Alertas</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <link rel="stylesheet" href="css/alertas.css">
+  <script src="js/alertas.js" defer></script>
 </head>
 
 <body>
@@ -15,14 +16,14 @@
       <i class="fas fa-bus"></i> Transporte Seguro
     </div>
     <nav class="sidebar-nav">
-      <a href="dashboard.html"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-      <a href="rutas.html"><i class="fas fa-route"></i> Rutas</a>
-      <a href="vehiculos.html"><i class="fas fa-bus-alt"></i> Vehículos</a>
-      <a href="paradas.html"><i class="fas fa-map-marker-alt"></i> Paradas</a>
-      <a href="alertas.html" class="active"><i class="fas fa-exclamation-triangle"></i> Alertas</a>
-      <a href="seguimiento.html"><i class="fas fa-map-marked-alt"></i> Seguimiento</a>
-      <a href="usuarios.html"><i class="fas fa-users"></i> Usuarios</a>
-      <a href="configuracion.html"><i class="fas fa-cog"></i> Configuración</a>
+      <a href="dashboard.html" class="nav-item"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+      <a href="rutas.html" class="nav-item"><i class="fas fa-route"></i> Rutas</a>
+      <a href="vehiculos.html" class="nav-item"><i class="fas fa-bus-alt"></i> Vehículos</a>
+      <a href="paradas.html" class="nav-item"><i class="fas fa-map-marker-alt"></i> Paradas</a>
+      <a href="alertas.html" class="nav-item active"><i class="fas fa-exclamation-triangle"></i> Alertas</a>
+      <a href="seguimiento.html" class="nav-item"><i class="fas fa-map-marked-alt"></i> Seguimiento</a>
+      <a href="usuarios.html" class="nav-item"><i class="fas fa-users"></i> Usuarios</a>
+      <a href="configuracion.html" class="nav-item"><i class="fas fa-cog"></i> Configuración</a>
     </nav>
   </aside>
 
@@ -30,50 +31,124 @@
   <main class="main-content">
     <div class="header">
       <h1>Gestión de Alertas</h1>
-      <button
-        style="background: #2563eb; color: white; padding: 0.5rem 1rem; border: none; border-radius: 6px; cursor: pointer;">
-        <i class="fas fa-plus"></i> Nueva Alerta
-      </button>
+      <div class="header-actions">
+        <div class="filters">
+          <input type="text" id="searchAlert" placeholder="Buscar por placa...">
+          <select id="typeFilter">
+            <option value="all">Todas</option>
+            <option value="maintenance">Mantenimiento</option>
+            <option value="documentation">Documentación</option>
+            <option value="insurance">Seguro</option>
+            <option value="mileage">Kilometraje</option>
+          </select>
+          <select id="statusFilter">
+            <option value="all">Todos</option>
+            <option value="pending">Pendientes</option>
+            <option value="resolved">Resueltas</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="newAlertBtn">
+          <i class="fas fa-plus"></i> Nueva Alerta
+        </button>
+      </div>
     </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Tipo</th>
-          <th>Descripción</th>
-          <th>Severidad</th>
-          <th>Estado</th>
-          <th>Fecha</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Accidente</td>
-          <td>Colisión en cruce de Av. Central</td>
-          <td><span class="badge critico">Crítico</span></td>
-          <td>Abierto</td>
-          <td>25/04/2025 13:45</td>
-          <td class="acciones">
-            <i class="fas fa-eye" title="Ver"></i>
-            <i class="fas fa-edit" title="Editar"></i>
-            <i class="fas fa-trash" title="Eliminar"></i>
-          </td>
-        </tr>
-        <tr>
-          <td>Retraso</td>
-          <td>Ruta R-205 con demora de 20 minutos</td>
-          <td><span class="badge medio">Media</span></td>
-          <td>Resuelta</td>
-          <td>24/04/2025 18:22</td>
-          <td class="acciones">
-            <i class="fas fa-eye" title="Ver"></i>
-            <i class="fas fa-edit" title="Editar"></i>
-            <i class="fas fa-trash" title="Eliminar"></i>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="alert-stats">
+      <div class="stat-card critical">
+        <i class="fas fa-exclamation-circle"></i>
+        <div>
+          <h3 id="criticalCount">0</h3>
+          <p>Críticas</p>
+        </div>
+      </div>
+      <div class="stat-card pending">
+        <i class="fas fa-clock"></i>
+        <div>
+          <h3 id="pendingCount">0</h3>
+          <p>Pendientes</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="alerts-container" id="alertsContainer">
+      <!-- Las alertas se cargarán dinámicamente aquí -->
+    </div>
+
+    <!-- Template para alertas -->
+    <template id="alertTemplate">
+      <div class="alerta-card">
+        <div class="alerta-header">
+          <i class="fas"></i>
+          <h4></h4>
+          <span class="badge"></span>
+        </div>
+        <div class="alerta-content">
+          <p class="vehicle-info"><strong>Vehículo:</strong> <span></span></p>
+          <p class="description"></p>
+          <p class="due-date"><strong>Fecha límite:</strong> <span></span></p>
+          <p class="created-date"><small>Creada: <span></span></small></p>
+        </div>
+        <div class="alerta-actions">
+          <button class="btn-action resolve">
+            <i class="fas fa-check"></i> Resolver
+          </button>
+          <button class="btn-action delete">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+    </template>
+
+    <!-- Modal para nueva alerta -->
+    <div class="modal" id="alertModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="modalTitle"><i class="fas fa-exclamation-triangle"></i> Nueva Alerta</h3>
+          <button class="close-btn" id="closeModalBtn">&times;</button>
+        </div>
+        <form id="alertForm">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="alertType">Tipo*</label>
+              <select id="alertType" required>
+                <option value="">Seleccione...</option>
+                <option value="maintenance">Mantenimiento</option>
+                <option value="documentation">Documentación</option>
+                <option value="insurance">Seguro</option>
+                <option value="mileage">Kilometraje</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="alertVehicle">Vehículo*</label>
+              <select id="alertVehicle" required>
+                <option value="">Seleccione...</option>
+                <!-- Se llenará dinámicamente -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="alertPriority">Prioridad*</label>
+              <select id="alertPriority" required>
+                <option value="high">Alta</option>
+                <option value="medium">Media</option>
+                <option value="low">Baja</option>
+              </select>
+            </div>
+            <div class="form-group full-width">
+              <label for="alertDescription">Descripción*</label>
+              <textarea id="alertDescription" rows="3" required></textarea>
+            </div>
+            <div class="form-group">
+              <label for="alertDueDate">Fecha Límite</label>
+              <input type="date" id="alertDueDate">
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-outline" id="cancelModalBtn">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Guardar Alerta</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </main>
 </body>
 

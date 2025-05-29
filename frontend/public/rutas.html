@@ -108,137 +108,7 @@
             <th>Acciones</th>
           </tr>
         </thead>
-        <tbody>
-          <tr>
-            <td class="route-code">R-101</td>
-            <td>Centro - Norte</td>
-            <td>8</td>
-            <td>06:00 - 22:00</td>
-            <td>3</td>
-            <td>
-              <span class="route-status status-active">
-                <i class="fas fa-circle" style="font-size: 8px;"></i>
-                Activa
-              </span>
-            </td>
-            <td>
-              <div class="route-actions">
-                <button class="action-btn" title="Ver detalles">
-                  <i class="fas fa-eye"></i>
-                </button>
-                <button class="action-btn" title="Editar">
-                  <i class="fas fa-edit"></i>
-                </button>
-                <button class="action-btn" title="Eliminar">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td class="route-code">R-102</td>
-            <td>Centro - Sur</td>
-            <td>10</td>
-            <td>05:30 - 23:00</td>
-            <td>4</td>
-            <td>
-              <span class="route-status status-active">
-                <i class="fas fa-circle" style="font-size: 8px;"></i>
-                Activa
-              </span>
-            </td>
-            <td>
-              <div class="route-actions">
-                <button class="action-btn" title="Ver detalles">
-                  <i class="fas fa-eye"></i>
-                </button>
-                <button class="action-btn" title="Editar">
-                  <i class="fas fa-edit"></i>
-                </button>
-                <button class="action-btn" title="Eliminar">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td class="route-code">R-205</td>
-            <td>Este - Oeste</td>
-            <td>12</td>
-            <td>07:00 - 21:00</td>
-            <td>2</td>
-            <td>
-              <span class="route-status status-maintenance">
-                <i class="fas fa-circle" style="font-size: 8px;"></i>
-                Mantenimiento
-              </span>
-            </td>
-            <td>
-              <div class="route-actions">
-                <button class="action-btn" title="Ver detalles">
-                  <i class="fas fa-eye"></i>
-                </button>
-                <button class="action-btn" title="Editar">
-                  <i class="fas fa-edit"></i>
-                </button>
-                <button class="action-btn" title="Eliminar">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td class="route-code">R-304</td>
-            <td>Circular Norte</td>
-            <td>15</td>
-            <td>06:00 - 00:00</td>
-            <td>5</td>
-            <td>
-              <span class="route-status status-inactive">
-                <i class="fas fa-circle" style="font-size: 8px;"></i>
-                Inactiva
-              </span>
-            </td>
-            <td>
-              <div class="route-actions">
-                <button class="action-btn" title="Ver detalles">
-                  <i class="fas fa-eye"></i>
-                </button>
-                <button class="action-btn" title="Editar">
-                  <i class="fas fa-edit"></i>
-                </button>
-                <button class="action-btn" title="Eliminar">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td class="route-code">R-401</td>
-            <td>Zona Industrial</td>
-            <td>6</td>
-            <td>05:00 - 20:00</td>
-            <td>3</td>
-            <td>
-              <span class="route-status status-active">
-                <i class="fas fa-circle" style="font-size: 8px;"></i>
-                Activa
-              </span>
-            </td>
-            <td>
-              <div class="route-actions">
-                <button class="action-btn" title="Ver detalles">
-                  <i class="fas fa-eye"></i>
-                </button>
-                <button class="action-btn" title="Editar">
-                  <i class="fas fa-edit"></i>
-                </button>
-                <button class="action-btn" title="Eliminar">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </div>
-            </td>
-          </tr>
+        <tbody id="routesTableBody">
         </tbody>
       </table>
     </div>
@@ -310,28 +180,164 @@
   </div>
 
   <script>
-    // Modal logic
+    // Route data
+    let routes = [
+      { code: 'R-101', name: 'Centro - Norte', stops: 8, schedule: '06:00 - 22:00', vehicles: 3, status: 'active' },
+      { code: 'R-102', name: 'Centro - Sur', stops: 10, schedule: '05:30 - 23:00', vehicles: 4, status: 'active' },
+      { code: 'R-205', name: 'Este - Oeste', stops: 12, schedule: '07:00 - 21:00', vehicles: 2, status: 'maintenance' },
+      { code: 'R-304', name: 'Circular Norte', stops: 15, schedule: '06:00 - 00:00', vehicles: 5, status: 'inactive' },
+      { code: 'R-401', name: 'Zona Industrial', stops: 6, schedule: '05:00 - 20:00', vehicles: 3, status: 'active' }
+    ];
+
+    // DOM Elements
+    const routesTable = document.getElementById('routesTableBody');
     const addRouteBtn = document.getElementById('addRouteBtn');
     const addRouteModal = document.getElementById('addRouteModal');
     const closeModalBtn = document.getElementById('closeModalBtn');
     const cancelModalBtn = document.getElementById('cancelModalBtn');
+    const addRouteForm = document.getElementById('addRouteForm');
+    const searchInput = document.getElementById('searchInput');
+    const statusFilter = document.getElementById('statusFilter');
+    const typeFilter = document.getElementById('typeFilter');
 
-    addRouteBtn.addEventListener('click', () => {
-      addRouteModal.style.display = 'block';
-    });
+    // Render routes table
+    function renderRoutes() {
+      routesTable.innerHTML = '';
+      
+      const filteredRoutes = routes.filter(route => {
+        const matchesSearch = route.code.toLowerCase().includes(searchInput.value.toLowerCase()) || 
+                            route.name.toLowerCase().includes(searchInput.value.toLowerCase());
+        const matchesStatus = statusFilter.value === 'all' || route.status === statusFilter.value;
+        const matchesType = typeFilter.value === 'all' || 
+                           (typeFilter.value === 'urban' && route.name.includes('Centro')) ||
+                           (typeFilter.value === 'interurban' && route.name.includes('Industrial')) ||
+                           (typeFilter.value === 'special' && route.name.includes('Circular'));
+        
+        return matchesSearch && matchesStatus && matchesType;
+      });
 
-    closeModalBtn.addEventListener('click', () => {
-      addRouteModal.style.display = 'none';
-    });
+      filteredRoutes.forEach(route => {
+        const row = document.createElement('tr');
+        
+        row.innerHTML = `
+          <td class="route-code">${route.code}</td>
+          <td>${route.name}</td>
+          <td>${route.stops}</td>
+          <td>${route.schedule}</td>
+          <td>${route.vehicles}</td>
+          <td>
+            <span class="route-status status-${route.status}">
+              <i class="fas fa-circle" style="font-size: 8px;"></i>
+              ${getStatusText(route.status)}
+            </span>
+          </td>
+          <td>
+            <div class="route-actions">
+              <button class="action-btn" title="Ver detalles" onclick="viewRoute('${route.code}')">
+                <i class="fas fa-eye"></i>
+              </button>
+              <button class="action-btn" title="Editar" onclick="editRoute('${route.code}')">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="action-btn" title="Eliminar" onclick="deleteRoute('${route.code}')">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </td>
+        `;
+        
+        routesTable.appendChild(row);
+      });
+    }
 
-    cancelModalBtn.addEventListener('click', () => {
-      addRouteModal.style.display = 'none';
-    });
-
-    window.addEventListener('click', (event) => {
-      if (event.target === addRouteModal) {
-        addRouteModal.style.display = 'none';
+    // Helper function to get status text
+    function getStatusText(status) {
+      switch(status) {
+        case 'active': return 'Activa';
+        case 'inactive': return 'Inactiva';
+        case 'maintenance': return 'En mantenimiento';
+        default: return status;
       }
+    }
+
+    // Modal functions
+    function openModal() {
+      addRouteModal.style.display = 'block';
+    }
+
+    function closeModal() {
+      addRouteModal.style.display = 'none';
+      addRouteForm.reset();
+    }
+
+    // Route CRUD operations
+    function addRoute(e) {
+      e.preventDefault();
+      
+      const newRoute = {
+        code: document.getElementById('routeCode').value,
+        name: document.getElementById('routeName').value,
+        stops: parseInt(document.getElementById('routeStops').value),
+        schedule: document.getElementById('routeSchedule').value,
+        vehicles: parseInt(document.getElementById('routeVehicles').value),
+        status: document.getElementById('routeStatus').value
+      };
+      
+      routes.push(newRoute);
+      renderRoutes();
+      closeModal();
+    }
+
+    function viewRoute(code) {
+      const route = routes.find(r => r.code === code);
+      alert(`Detalles de ruta:\nCódigo: ${route.code}\nNombre: ${route.name}\nParadas: ${route.stops}\nHorario: ${route.schedule}\nVehículos: ${route.vehicles}\nEstado: ${getStatusText(route.status)}`);
+    }
+
+    function editRoute(code) {
+      const route = routes.find(r => r.code === code);
+      document.getElementById('routeCode').value = route.code;
+      document.getElementById('routeName').value = route.name;
+      document.getElementById('routeStops').value = route.stops;
+      document.getElementById('routeSchedule').value = route.schedule;
+      document.getElementById('routeVehicles').value = route.vehicles;
+      document.getElementById('routeStatus').value = route.status;
+      
+      openModal();
+      
+      // Change form to edit mode
+      addRouteForm.onsubmit = function(e) {
+        e.preventDefault();
+        route.code = document.getElementById('routeCode').value;
+        route.name = document.getElementById('routeName').value;
+        route.stops = parseInt(document.getElementById('routeStops').value);
+        route.schedule = document.getElementById('routeSchedule').value;
+        route.vehicles = parseInt(document.getElementById('routeVehicles').value);
+        route.status = document.getElementById('routeStatus').value;
+        
+        renderRoutes();
+        closeModal();
+      };
+    }
+
+    function deleteRoute(code) {
+      if(confirm('¿Estás seguro de eliminar esta ruta?')) {
+        routes = routes.filter(route => route.code !== code);
+        renderRoutes();
+      }
+    }
+
+    // Event listeners
+    addRouteBtn.addEventListener('click', openModal);
+    closeModalBtn.addEventListener('click', closeModal);
+    cancelModalBtn.addEventListener('click', closeModal);
+    addRouteForm.addEventListener('submit', addRoute);
+    searchInput.addEventListener('input', renderRoutes);
+    statusFilter.addEventListener('change', renderRoutes);
+    typeFilter.addEventListener('change', renderRoutes);
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      renderRoutes();
     });
   </script>
 </body>
